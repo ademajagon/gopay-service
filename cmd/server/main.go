@@ -7,6 +7,7 @@ import (
 	"os"
 
 	pgadapter "github.com/ademajagon/gopay-service/internal/adapters/postgres"
+	redisadapter "github.com/ademajagon/gopay-service/internal/adapters/redis"
 	"github.com/ademajagon/gopay-service/internal/config"
 	"github.com/joho/godotenv"
 )
@@ -26,6 +27,10 @@ func run() error {
 		return fmt.Errorf("load config: %w", err)
 	}
 
+	logger := newLogger(cfg.IsProd())
+	logger.Info("payment service starting",
+		"env", cfg.Env)
+
 	// NewPool() calls pool.Ping() before returning, if the DB is unreachable,
 	ctx := context.Background()
 	pool, err := pgadapter.NewPool(ctx, pgadapter.PoolConfig{
@@ -41,15 +46,22 @@ func run() error {
 		return fmt.Errorf("connect to postgres: %w", err)
 	}
 	defer pool.Close()
-
 	slog.Info("postgres connected", "max_conns", cfg.Database.MaxConns)
 
-	fmt.Printf("config: %+v\n", cfg)
+	redisClient := redisadapter.NewClient(redisadapter.Config{
+		Addr:     cfg.Redis.Addr,
+		Password: cfg.Redis.Password,
+		DB:       cfg.Redis.DB,
+	})
+	defer redisClient.Close()
 
-	logger := newLogger(cfg.IsProd())
-	logger.Info("payment service starting",
-		"env", cfg.Env)
+	if err := redisadapter.Ping(ctx, redisClient); err != nil {
+		return fmt.Errorf("connect to redis: %w", err)
+	}
+	slog.Info("redis connected", "addr", cfg.Redis.Addr)
 
+	repo := pgadapter.NewRepository(pool)
+	
 	logger.Info("payment service stopped")
 	return nil
 }

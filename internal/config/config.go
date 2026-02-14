@@ -11,6 +11,7 @@ type Config struct {
 	Env string `envconfig:"ENV" default:"development"`
 
 	Database DatabaseConfig
+	Redis    RedisConfig
 }
 
 type DatabaseConfig struct {
@@ -27,6 +28,15 @@ type DatabaseConfig struct {
 	MaxConnLifeTime time.Duration `envconfig:"DATABASE_MAX_CONN_LIFETIME" default:"1h"`
 	MaxConnIdleTime time.Duration `envconfig:"DATABASE_MAX_CONN_IDLE" default:"30m"`
 	HealthPeriod    time.Duration `envconfig:"DATABASE_HEALTH_PERIOD" default:"1m"`
+}
+
+type RedisConfig struct {
+	// host:port, "localhost:6379" for dev, cluster endpoint for prod.
+	Addr     string `envconfig:"REDIS_ADDR" default:"localhost:6379"`
+	Password string `envconfig:"REDIS_PASSWORD" default:""`
+	DB       int    `envconfig:"REDIS_DB" default:"0"`
+
+	Namespace string `envconfig:"REDIS_NAMESPACE" default:"payment-service"`
 }
 
 func Load() (*Config, error) {
