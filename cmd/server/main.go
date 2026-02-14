@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
 
+	pgadapter "github.com/ademajagon/gopay-service/internal/adapters/postgres"
 	"github.com/ademajagon/gopay-service/internal/config"
 	"github.com/joho/godotenv"
 )
@@ -23,6 +25,24 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
+
+	// NewPool() calls pool.Ping() before returning, if the DB is unreachable,
+	ctx := context.Background()
+	pool, err := pgadapter.NewPool(ctx, pgadapter.PoolConfig{
+		DSN:               cfg.Database.DSN,
+		MaxConns:          cfg.Database.MaxConns,
+		MinConns:          cfg.Database.MinConns,
+		MaxConnLifetime:   cfg.Database.MaxConnLifeTime,
+		MaxConnIdleTime:   cfg.Database.MaxConnIdleTime,
+		HealthCheckPeriod: cfg.Database.HealthPeriod,
+	})
+
+	if err != nil {
+		return fmt.Errorf("connect to postgres: %w", err)
+	}
+	defer pool.Close()
+
+	slog.Info("postgres connected", "max_conns", cfg.Database.MaxConns)
 
 	fmt.Printf("config: %+v\n", cfg)
 
