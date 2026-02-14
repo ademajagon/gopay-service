@@ -60,8 +60,8 @@ func run() error {
 	}
 	slog.Info("redis connected", "addr", cfg.Redis.Addr)
 
-	repo := pgadapter.NewRepository(pool)
-	
+	//repo := pgadapter.NewRepository(pool)
+
 	logger.Info("payment service stopped")
 	return nil
 }
