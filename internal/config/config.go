@@ -10,8 +10,21 @@ import (
 type Config struct {
 	Env string `envconfig:"ENV" default:"development"`
 
+	HTTP     HttpConfig
 	Database DatabaseConfig
 	Redis    RedisConfig
+}
+
+type HttpConfig struct {
+	Addr string `envconfig:"HTTP_ADDR" default:":8080"`
+
+	ReadTimeout time.Duration `envconfig:"HTTP_READ_TIMEOUT" default:"5s"`
+
+	WriteTimeout time.Duration `envconfig:"HTTP_WRITE_TIMEOUT" default:"10s"`
+
+	IdleTimeout time.Duration `envconfig:"HTTP_IDLE_TIMEOUT" default:"120s"`
+
+	ShutdownTimeout time.Duration `envconfig:"HTTP_SHUTDOWN_TIMEOUT" default:"30s"`
 }
 
 type DatabaseConfig struct {

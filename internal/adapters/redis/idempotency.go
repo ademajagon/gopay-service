@@ -3,10 +3,35 @@ package redis
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 )
+
+type IdempotencyStore struct {
+	client    redis.UniversalClient
+	namespace string
+	log       *slog.Logger
+}
+
+func (i IdempotencyStore) Get(ctx context.Context, key string) (string, bool, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (i IdempotencyStore) Set(ctx context.Context, key string, result string, ttl time.Duration) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func NewIdempotencyStore(client redis.UniversalClient, namespace string, log *slog.Logger) *IdempotencyStore {
+	return &IdempotencyStore{
+		client:    client,
+		namespace: namespace,
+		log:       log,
+	}
+}
 
 type Config struct {
 	Addr     string
