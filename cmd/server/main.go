@@ -5,9 +5,13 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 
+	"github.com/ademajagon/gopay-service/internal/adapters/httpserver"
 	pgadapter "github.com/ademajagon/gopay-service/internal/adapters/postgres"
 	redisadapter "github.com/ademajagon/gopay-service/internal/adapters/redis"
+	"github.com/ademajagon/gopay-service/internal/app"
 	"github.com/ademajagon/gopay-service/internal/config"
 	"github.com/joho/godotenv"
 )
@@ -60,9 +64,67 @@ func run() error {
 	}
 	slog.Info("redis connected", "addr", cfg.Redis.Addr)
 
-	//repo := pgadapter.NewRepository(pool)
+	repo := pgadapter.NewRepository(pool)
+	idempotencyStore := redisadapter.NewIdempotencyStore(redisClient, cfg.Redis.Namespace, logger)
 
-	logger.Info("payment service stopped")
+	// app service wire
+	svc := app.NewPaymentService(
+		repo,
+		idempotencyStore,
+		repo,
+		logger,
+	)
+
+	// http handler and server
+	handler := httpserver.NewHandler(svc, logger)
+
+	checks := []httpserver.ReadinessCheck{
+		func(ctx context.Context) error { return pool.Ping(ctx) },
+		func(ctx context.Context) error { return redisadapter.Ping(ctx, redisClient) },
+	}
+
+	server := httpserver.NewServer(
+		httpserver.ServerConfig{
+			Addr:            cfg.HTTP.Addr,
+			ReadTimeout:     cfg.HTTP.ReadTimeout,
+			WriteTimeout:    cfg.HTTP.WriteTimeout,
+			IdleTimeout:     cfg.HTTP.IdleTimeout,
+			ShutdownTimeout: cfg.HTTP.ShutdownTimeout,
+		},
+		handler,
+		checks,
+		logger,
+	)
+
+	errCh := make(chan error, 1)
+	go func() {
+		if err := server.Start(); err != nil {
+			errCh <- err
+		}
+	}()
+
+	logger.Info("gopay service ready",
+		"addr", cfg.HTTP.Addr,
+		"metrics", cfg.HTTP.Addr+"/metrics",
+		"health", cfg.HTTP.Addr+"/healthz/ready")
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	select {
+	case sig := <-quit:
+		logger.Info("shutdown signal received", "signal", sig.String())
+	case err := <-errCh:
+		logger.Error("fatal server error", "err", err)
+		return err
+	}
+
+	if err := server.Shutdown(context.Background()); err != nil {
+		logger.Error("graceful shutdown error", "err", err)
+		return err
+	}
+
+	logger.Info("gopay service stopped")
 	return nil
 }
 
