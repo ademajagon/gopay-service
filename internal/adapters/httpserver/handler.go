@@ -153,7 +153,7 @@ func NewServer(cfg ServerConfig, h *Handler, checks []ReadinessCheck, log *slog.
 	r.Get("/healthz/ready", readinessHandler(checks))
 
 	// routes
-	r.Route("v1/payments", func(r chi.Router) {
+	r.Route("/v1/payments", func(r chi.Router) {
 		r.Post("/", h.initiatePayment)
 		//r.Get("/{paymentID}")
 	})
