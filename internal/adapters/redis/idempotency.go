@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -15,22 +16,38 @@ type IdempotencyStore struct {
 	log       *slog.Logger
 }
 
-func (i IdempotencyStore) Get(ctx context.Context, key string) (string, bool, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (i IdempotencyStore) Set(ctx context.Context, key string, result string, ttl time.Duration) error {
-	//TODO implement me
-	panic("implement me")
-}
-
 func NewIdempotencyStore(client redis.UniversalClient, namespace string, log *slog.Logger) *IdempotencyStore {
 	return &IdempotencyStore{
 		client:    client,
 		namespace: namespace,
 		log:       log,
 	}
+}
+
+func (s *IdempotencyStore) key(k string) string {
+	return fmt.Sprintf("%s:idempotency:%s", s.namespace, k)
+}
+
+func (s *IdempotencyStore) Get(ctx context.Context, key string) (string, bool, error) {
+	val, err := s.client.Get(ctx, s.key(key)).Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return "", false, nil
+		}
+		return "", false, fmt.Errorf("redis GET idempotency key: %w", err)
+	}
+	return val, true, nil
+}
+
+func (s *IdempotencyStore) Set(ctx context.Context, key string, result string, ttl time.Duration) error {
+	ok, err := s.client.SetNX(ctx, s.key(key), result, ttl).Result()
+	if err != nil {
+		return fmt.Errorf("redis SETNX idempotency key: %w", err)
+	}
+	if !ok {
+		s.log.DebugContext(ctx, "idempotency key already cached", "key", key)
+	}
+	return nil
 }
 
 type Config struct {

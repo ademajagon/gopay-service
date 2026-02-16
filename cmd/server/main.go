@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -13,6 +14,9 @@ import (
 	redisadapter "github.com/ademajagon/gopay-service/internal/adapters/redis"
 	"github.com/ademajagon/gopay-service/internal/app"
 	"github.com/ademajagon/gopay-service/internal/config"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/joho/godotenv"
 )
 
@@ -51,6 +55,10 @@ func run() error {
 	}
 	defer pool.Close()
 	slog.Info("postgres connected", "max_conns", cfg.Database.MaxConns)
+
+	if err := runMigrations(cfg.Database.DSN, cfg.Database.MigrationsPath, logger); err != nil {
+		return fmt.Errorf("run migrations: %w", err)
+	}
 
 	redisClient := redisadapter.NewClient(redisadapter.Config{
 		Addr:     cfg.Redis.Addr,
@@ -144,4 +152,23 @@ func newLogger(prod bool) *slog.Logger {
 	logger := slog.New(handler)
 	slog.SetDefault(logger)
 	return logger
+}
+
+func runMigrations(dsn, migrationsPath string, log *slog.Logger) error {
+	log.Info("running database migrations", "path", migrationsPath, "dsn", dsn)
+
+	m, err := migrate.New(migrationsPath, dsn)
+	if err != nil {
+		return fmt.Errorf("init migrate: %w", err)
+	}
+	defer func() {
+		srcErr, dbErr := m.Close()
+		log.Info("migrate closed", "source_err", srcErr, "db_err", dbErr)
+	}()
+
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return fmt.Errorf("migrate up: %w", err)
+	}
+
+	return nil
 }
