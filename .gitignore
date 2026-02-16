@@ -16,7 +16,7 @@ coverage.html
 # Build output
 dist/
 
-# Local environment — NEVER commit this
+# Local environment
 .env
 
 # Go workspace

@@ -20,6 +20,12 @@ import (
 	"github.com/joho/godotenv"
 )
 
+var (
+	version   = "dev"
+	commitSHA = "unknown"
+	buildTime = "unknown"
+)
+
 func main() {
 	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "startup error: %v\n", err)
@@ -36,8 +42,12 @@ func run() error {
 	}
 
 	logger := newLogger(cfg.IsProd())
-	logger.Info("payment service starting",
-		"env", cfg.Env)
+	logger.Info("gopay service starting",
+		"version", version,
+		"commit", commitSHA,
+		"build_time", buildTime,
+		"env", cfg.Env,
+	)
 
 	// NewPool() calls pool.Ping() before returning, if the DB is unreachable,
 	ctx := context.Background()
