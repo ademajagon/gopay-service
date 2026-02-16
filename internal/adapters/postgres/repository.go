@@ -7,9 +7,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ademajagon/gopay-service/internal/domain"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/ademajagon/gopay-service/internal/domain"
 )
 
 type Repository struct {
@@ -54,11 +55,6 @@ func (r *Repository) upsertPayment(ctx context.Context, tx pgx.Tx, p *domain.Pay
 			updated_at     = EXCLUDED.updated_at,
 			version        = EXCLUDED.version
 		WHERE
-			-- This is the optimistic locking check.
-			-- EXCLUDED.version is what we're trying to write.
-			-- payments.version is what's currently in the DB.
-			-- They should differ by exactly 1: if another writer already
-			-- incremented it, this WHERE clause fails → 0 rows affected.
 			payments.version = EXCLUDED.version - 1
 	`
 

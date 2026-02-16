@@ -9,15 +9,16 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/joho/godotenv"
+
 	"github.com/ademajagon/gopay-service/internal/adapters/httpserver"
 	pgadapter "github.com/ademajagon/gopay-service/internal/adapters/postgres"
 	redisadapter "github.com/ademajagon/gopay-service/internal/adapters/redis"
 	"github.com/ademajagon/gopay-service/internal/app"
 	"github.com/ademajagon/gopay-service/internal/config"
-	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"github.com/joho/godotenv"
 )
 
 var (

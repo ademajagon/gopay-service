@@ -1,0 +1,58 @@
+linters:
+  default: none
+
+  enable:
+    - errcheck
+    - staticcheck
+    - gosec
+    - bodyclose
+    - noctx
+    - durationcheck
+    - errorlint
+    - copyloopvar
+    - govet
+    - unused
+    - prealloc
+    - unconvert
+    - gofmt
+    - goimports
+    - misspell
+    - whitespace
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: false
+
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment
+
+  gosec:
+    excludes:
+      - G104
+      - G115
+
+  staticcheck:
+    checks:
+      - "all"
+      - "-SA1019"
+
+  goimports:
+    local-prefixes: github.com/ademajagon/gopay-service
+
+issues:
+  exclude-rules:
+    - path: "_test\\.go"
+      linters:
+        - errcheck
+        - gosec
+        - govet
+
+    - path: "migrations/"
+      linters:
+        - all
+
+  max-issues-per-linter: 50
+  max-same-issues: 5
