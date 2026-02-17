@@ -16,8 +16,9 @@ coverage.html
 # Build output
 dist/
 
-# Local environment
 .env
+
+k8s/secrets.yaml
 
 # Go workspace
 go.work
