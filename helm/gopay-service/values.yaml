@@ -1,0 +1,35 @@
+image:
+  repository: gopay-service
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+replicas: 3
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    memory: 512Mi
+
+hpa:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 20
+  targetCPU: 70
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+
+database:
+  dsn: ""
+  maxConns: 20
+  minConns: 5
+
+redis:
+  addr: "redis:6379"
+  namespace: "gopay-service"
