@@ -15,10 +15,13 @@ ARG VERSION=dev
 ARG COMMIT_SHA=unknown
 ARG BUILD_TIME=unknown
 
+ARG TARGETOS
+ARG TARGETARCH
+
 COPY . .
 
 RUN --mount=type=cache,target=/root/.cache/go \
-    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} \
     go build \
         -ldflags="-s -w \
             -X main.version=${VERSION} \
@@ -34,7 +37,6 @@ RUN file /build/bin/server | grep -q "statically linked" \
 FROM gcr.io/distroless/static-debian12:nonroot AS runtime
 
 COPY --from=builder --chown=nonroot:nonroot /build/bin/server /server
-
 COPY --from=builder --chown=nonroot:nonroot /build/migrations /migrations
 
 USER nonroot:nonroot

@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gopay-service.fullname" . }}
+  labels:
+    {{- include "gopay-service.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.hpa.enabled }}
+  replicas: {{ .Values.replicas }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: {{ include "gopay-service.name" . }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: {{ include "gopay-service.name" . }}
+    spec:
+      containers:
+        - name: gopay-service
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: ENV
+              value: "production"
+            - name: HTTP_ADDR
+              value: ":8080"
+            - name: DATABASE_MIGRATIONS_PATH
+              value: "file:///migrations"
+            - name: DATABASE_MAX_CONNS
+              value: {{ .Values.database.maxConns | quote }}
+            - name: DATABASE_MIN_CONNS
+              value: {{ .Values.database.minConns | quote }}
+            - name: REDIS_ADDR
+              value: {{ .Values.redis.addr | quote }}
+            - name: REDIS_NAMESPACE
+              value: {{ .Values.redis.namespace | quote }}
+            - name: GOMEMLIMIT
+              value: "400MiB"
+            # From Secret
+            - name: DATABASE_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "gopay-service.fullname" . }}
+                  key: database-dsn
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /healthz/live
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /healthz/ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+      terminationGracePeriodSeconds: 30

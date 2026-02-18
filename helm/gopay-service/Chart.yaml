@@ -1,0 +1,6 @@
+apiVersion: v2
+name: gopay-service
+description: Gopay Service - Microservice for payment processing
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
